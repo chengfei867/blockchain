@@ -1,7 +1,7 @@
 package main
 
 import (
-	"blockchain/publicChain/part1-Basic-Prototype/BLC"
+	"blockchain/publicChain/part2-Basic-Prototype/BLC"
 	"fmt"
 )
 
