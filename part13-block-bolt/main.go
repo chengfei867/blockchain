@@ -1,14 +1,14 @@
 package main
 
 import (
-	"blockchain/publicChain/part14-block-bolt/BLC"
+	"blockchain/publicChain/part13-block-bolt/BLC"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
 )
 
 func main() {
-	mydb, err := bolt.Open("D:\\workspace\\go\\blockchain\\part14-block-bolt/my.db", 0600, nil)
+	mydb, err := bolt.Open("my.db", 0600, nil)
 	if err != nil {
 		log.Panicln(err)
 	}
