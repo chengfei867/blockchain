@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	mydb, err := bolt.Open("my.db", 0600, nil)
+	mydb, err := bolt.Open("E:\\WorkSpace\\goWorkspace\\Go\\src\\blockchain\\publicChain\\part13-block-bolt\\my.db", 0600, nil)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -23,7 +23,6 @@ func main() {
 	block := new(BLC.Block)
 	block = BLC.Deserialize(blockBytes)
 	fmt.Printf("hash:%x", block.Hash)
-
 }
 
 func createDB(mydb *bolt.DB) {
