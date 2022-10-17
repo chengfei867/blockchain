@@ -52,7 +52,7 @@ func (cli *CLI) Run() {
 		if *flagCreateChainData == "" {
 			cli.PrintUsage()
 		}
-		CreateBlockchainWithGenesisBlock(*flagCreateChainData)
+		CreateBlockchainWithGenesisBlock([]*Transaction{})
 	}
 
 	if addBlockCmd.Parsed() {
@@ -65,7 +65,7 @@ func (cli *CLI) Run() {
 		if *flagAddBlockData == "" {
 			cli.PrintUsage()
 		}
-		blockchain.AddBlockToBlockchain(*flagAddBlockData)
+		blockchain.AddBlockToBlockchain([]*Transaction{})
 	}
 	if printChainCmd.Parsed() {
 		if !dbExists() {

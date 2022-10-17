@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
+	"os"
 	"time"
 )
 
@@ -16,12 +17,24 @@ type Blockchain struct {
 	DB  *bolt.DB
 }
 
+// 判断数据库是否存在
+func dbExists() bool {
+	if _, err := os.Stat(dbName); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 // CreateBlockchainWithGenesisBlock 创建带有创世区块的区块链
-<<<<<<< HEAD
-func CreateBlockchainWithGenesisBlock(data string) {
-=======
-func CreateBlockchainWithGenesisBlock() {
->>>>>>> origin/master
+func CreateBlockchainWithGenesisBlock(tx []*Transaction) {
+	if dbExists() {
+		fmt.Println("区块链已存在......")
+		blockchain := GetBlockChain()
+		defer blockchain.Close()
+		blockchain.PrintChain()
+		os.Exit(1)
+	}
 	//创建区块链数据库
 	DB, err := bolt.Open(dbName, 0600, nil)
 	if err != nil {
@@ -36,11 +49,7 @@ func CreateBlockchainWithGenesisBlock() {
 	//初始化区块链
 	var blockchain = new(Blockchain)
 	//创建创世区块
-<<<<<<< HEAD
-	genesis := CreateGenesisBlock(data)
-=======
-	genesis := CreateGenesisBlock("genesis block !!!")
->>>>>>> origin/master
+	genesis := CreateGenesisBlock(tx)
 	genesisBytes, err := genesis.Serialize()
 	if err != nil {
 		log.Panicln(err)
@@ -64,10 +73,6 @@ func CreateBlockchainWithGenesisBlock() {
 	//更新区块结构
 	blockchain.Tip = genesis.Hash
 	blockchain.DB = DB
-<<<<<<< HEAD
-	fmt.Println("The blockchain created successfully!")
-=======
->>>>>>> origin/master
 }
 
 //GetBlockChain 通过数据库获取blockchain
@@ -77,20 +82,14 @@ func GetBlockChain() *Blockchain {
 	if err != nil {
 		log.Panicln(err)
 	}
-	//defer func(DB *bolt.DB) {
-	//	err := DB.Close()
-	//	if err != nil {
-	//		log.Panicln(err)
-	//	}
-	//}(DB)
 	var Tip []byte
-	err = DB.Update(func(tx *bolt.Tx) error {
+	err = DB.View(func(tx *bolt.Tx) error {
+		//获取区块链表
 		bucket := tx.Bucket([]byte(bucketName))
-		if err != nil {
-			log.Panicln(err)
+		if bucket != nil {
+			//获取最后一个区块哈希
+			Tip = bucket.Get([]byte(tipString))
 		}
-		blockchain := bucket
-		Tip = blockchain.Get([]byte(tipString))
 		return nil
 	})
 	if err != nil {
@@ -103,10 +102,10 @@ func GetBlockChain() *Blockchain {
 }
 
 // AddBlockToBlockchain 添加区块到区块链
-func (blc *Blockchain) AddBlockToBlockchain(data string) {
+func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
 	//获取当前区块高度
 	height := blc.GetBlock(blc.Tip).Height + 1
-	block := NewBlock(data, height, blc.Tip)
+	block := NewBlock(txs, height, blc.Tip)
 	err := blc.DB.Update(func(tx *bolt.Tx) error {
 		//定义全局异常变量
 		var err error
@@ -161,7 +160,7 @@ func (blc *Blockchain) PrintChain() {
 		fmt.Println("===============================================")
 		fmt.Printf("Height：%d\n", block.Height)
 		fmt.Printf("PrevBlockHash：%x\n", block.PrevBlockHash)
-		fmt.Printf("Data：%s\n", block.Data)
+		fmt.Printf("Transactions：%v\n", block.Txs)
 		fmt.Printf("Timestamp：%s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 03:04:05 PM"))
 		fmt.Printf("Hash：%x\n", block.Hash)
 		fmt.Printf("Nonce：%d\n", block.Nonce)
