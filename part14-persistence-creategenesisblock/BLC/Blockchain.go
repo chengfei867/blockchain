@@ -17,7 +17,11 @@ type Blockchain struct {
 }
 
 // CreateBlockchainWithGenesisBlock 创建带有创世区块的区块链
+<<<<<<< HEAD
 func CreateBlockchainWithGenesisBlock(data string) {
+=======
+func CreateBlockchainWithGenesisBlock() {
+>>>>>>> origin/master
 	//创建区块链数据库
 	DB, err := bolt.Open(dbName, 0600, nil)
 	if err != nil {
@@ -32,7 +36,11 @@ func CreateBlockchainWithGenesisBlock(data string) {
 	//初始化区块链
 	var blockchain = new(Blockchain)
 	//创建创世区块
+<<<<<<< HEAD
 	genesis := CreateGenesisBlock(data)
+=======
+	genesis := CreateGenesisBlock("genesis block !!!")
+>>>>>>> origin/master
 	genesisBytes, err := genesis.Serialize()
 	if err != nil {
 		log.Panicln(err)
@@ -56,7 +64,10 @@ func CreateBlockchainWithGenesisBlock(data string) {
 	//更新区块结构
 	blockchain.Tip = genesis.Hash
 	blockchain.DB = DB
+<<<<<<< HEAD
 	fmt.Println("The blockchain created successfully!")
+=======
+>>>>>>> origin/master
 }
 
 //GetBlockChain 通过数据库获取blockchain
