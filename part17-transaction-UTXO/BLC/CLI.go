@@ -13,17 +13,21 @@ type CLI struct {
 func (cli *CLI) PrintUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("\tcreateChain -address Address  --创建区块链")
-	fmt.Println("\taddBlock -data DATA -交易数据")
+	fmt.Println("\tsend -from FROM -to TO -amount AMOUNT -转账交易")
 	fmt.Println("\tprintChain  --输出区块信息")
 	os.Exit(1)
 }
 
 func (cli *CLI) Run() {
 	createChainCmd := flag.NewFlagSet("createChain", flag.ExitOnError)
-	addBlockCmd := flag.NewFlagSet("addBlock", flag.ExitOnError)
+	sendBlockCmd := flag.NewFlagSet("send", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
+
 	flagCreateChainAddress := createChainCmd.String("address", "", "创建创世区块的地址")
-	flagAddBlockData := addBlockCmd.String("addBlock", "ffg@xd.com", "添加区块")
+	flagFrom := sendBlockCmd.String("from", "", "转账源地址。。。")
+	flagTo := sendBlockCmd.String("to", "", "转账目的地址。。。")
+	flagAmount := sendBlockCmd.String("amount", "", "转账金额。。。")
+
 	if len(os.Args) == 1 {
 		cli.PrintUsage()
 	}
@@ -33,8 +37,8 @@ func (cli *CLI) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
-	case "addBlock":
-		err := addBlockCmd.Parse(os.Args[2:])
+	case "send":
+		err := sendBlockCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
 		}
@@ -54,17 +58,29 @@ func (cli *CLI) Run() {
 		CreateBlockchainWithGenesisBlock(*flagCreateChainAddress)
 	}
 
-	if addBlockCmd.Parsed() {
+	if sendBlockCmd.Parsed() {
 		if !dbExists() {
 			fmt.Println("区块链不存在!")
 			os.Exit(1)
 		}
 		blockchain := GetBlockChain()
 		defer blockchain.Close()
-		if *flagAddBlockData == "" {
+		if *flagFrom == "" {
+			log.Panicln("转账源地址不能为空!")
 			cli.PrintUsage()
 		}
-		blockchain.AddBlockToBlockchain([]*Transaction{})
+		if *flagTo == "" {
+			log.Panicln("转账目的地址不能为空!")
+			cli.PrintUsage()
+		}
+		if *flagAmount == "" {
+			log.Panicln("转账金额不能为空!")
+			cli.PrintUsage()
+		}
+		//blockchain.AddBlockToBlockchain([]*Transaction{})
+		fmt.Println(*flagFrom)
+		fmt.Println(*flagTo)
+		fmt.Println(*flagAmount)
 	}
 	if printChainCmd.Parsed() {
 		if !dbExists() {

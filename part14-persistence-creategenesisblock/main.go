@@ -21,6 +21,7 @@ func main() {
 	addBlockCmd := flag.NewFlagSet("addBlock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printChain", flag.ExitOnError)
 	flagAddBlockData := addBlockCmd.String("data", "ffg@xd.com", "交易数据...")
+	flagCreateChainData := initCmd.String("data", "ffg@xd.com", "创世区块数据...")
 
 	switch os.Args[1] {
 	case "init":
@@ -44,7 +45,11 @@ func main() {
 	}
 
 	if initCmd.Parsed() {
-		BLC.CreateBlockchainWithGenesisBlock()
+		if *flagCreateChainData == "" {
+			printUsage()
+			os.Exit(1)
+		}
+		BLC.CreateBlockchainWithGenesisBlock(*flagCreateChainData)
 	}
 
 	if addBlockCmd.Parsed() {

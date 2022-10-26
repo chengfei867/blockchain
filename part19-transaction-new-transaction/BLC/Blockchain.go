@@ -1,10 +1,12 @@
 package BLC
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -22,7 +24,6 @@ func dbExists() bool {
 	if _, err := os.Stat(dbName); os.IsNotExist(err) {
 		return false
 	}
-
 	return true
 }
 
@@ -75,6 +76,83 @@ func CreateBlockchainWithGenesisBlock(address string) {
 	blockchain.DB = DB
 }
 
+// GetUtxo  返回address所有未花费交易
+func (blc *Blockchain) GetUtxo(address string) []*TXOutput {
+	//
+	var utxo []*TXOutput
+	//
+	spentTXOutputs := make(map[string][]int)
+	//最后一个区块hash
+	hash := blc.Tip
+	for hash != nil {
+		//根据哈希查找区块
+		block := blc.GetBlock(hash)
+		//遍历交易
+		for _, tx := range block.Txs {
+			//输入
+			if !tx.IsCoinbaseTransaction() {
+				for _, in := range tx.Vins {
+					//是否能解锁
+					if in.UnLockWithAddress(address) {
+						key := hex.EncodeToString(in.TxHash)
+						spentTXOutputs[key] = append(spentTXOutputs[key], in.Vout)
+					}
+				}
+			}
+			//输出
+		to:
+			for index, out := range tx.Vouts {
+				//是否能解锁
+				if out.UnLockWithAddress(address) {
+					if spentTXOutputs != nil {
+						//遍历spentTXOutputs判断当前输出是否在之后的区块已被花费
+						for txHash, indexArray := range spentTXOutputs {
+							if txHash == hex.EncodeToString(tx.TxHash) {
+								for _, i := range indexArray {
+									if index == i {
+										continue to
+									}
+								}
+							}
+						}
+					}
+					utxo = append(utxo, out)
+				}
+
+			}
+		}
+		//hash指向前一个区块
+		hash = block.PrevBlockHash
+	}
+
+	return utxo
+}
+
+// GetBalance 获取账户余额
+func (blc *Blockchain) GetBalance(address string) {
+	utxo := blc.GetUtxo(address)
+	for _, output := range utxo {
+		fmt.Println(output.ScriptPubKey)
+		fmt.Println(output.Value)
+	}
+}
+
+// MineNewBlock 打包交易形成新区快
+func (blc *Blockchain) MineNewBlock(from []string, to []string, amount []string) {
+
+	//建立一笔交易
+	value, _ := strconv.Atoi(amount[0])
+	tx := NewTransaction(from[0], to[0], int64(value))
+	//1.构建交易数组
+	var txs []*Transaction
+	txs = append(txs, tx)
+
+	//2.创建新区快
+	block := NewBlock(txs, blc.GetHeight()+1, blc.Tip)
+	//3.将区块存储到数据库
+	blc.AddBlockToBlockchain(block)
+}
+
 //GetBlockChain 通过数据库获取blockchain
 func GetBlockChain() *Blockchain {
 	//创建区块链数据库
@@ -102,10 +180,8 @@ func GetBlockChain() *Blockchain {
 }
 
 // AddBlockToBlockchain 添加区块到区块链
-func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
+func (blc *Blockchain) AddBlockToBlockchain(block *Block) {
 	//获取当前区块高度
-	height := blc.GetBlock(blc.Tip).Height + 1
-	block := NewBlock(txs, height, blc.Tip)
 	err := blc.DB.Update(func(tx *bolt.Tx) error {
 		//定义全局异常变量
 		var err error
@@ -150,6 +226,11 @@ func (blc *Blockchain) GetBlock(hash []byte) *Block {
 		log.Panicln(err.Error())
 	}
 	return block
+}
+
+// GetHeight 获取区块高度
+func (blc *Blockchain) GetHeight() int64 {
+	return blc.GetBlock(blc.Tip).Height
 }
 
 // PrintChain  遍历区块链
