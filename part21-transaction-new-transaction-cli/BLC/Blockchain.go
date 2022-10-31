@@ -76,19 +76,57 @@ func CreateBlockchainWithGenesisBlock(address string) {
 	blockchain.DB = DB
 }
 
-// GetUtxo  返回address所有未花费交易
-func (blc *Blockchain) GetUtxo(address string) []*UTXO {
-	//
+// GetUtxos 返回address所有未花费交易
+func (blc *Blockchain) GetUtxos(address string, txs []*Transaction) []*UTXO {
 	var utxo []*UTXO
-	//
 	spentTXOutputs := make(map[string][]int)
+	//先遍历txs
+	for _, tx := range txs {
+		if !tx.IsCoinbaseTransaction() {
+			for _, in := range tx.Vins {
+				//是否能解锁
+				if in.UnLockWithAddress(address) {
+					key := hex.EncodeToString(in.TxHash)
+					spentTXOutputs[key] = append(spentTXOutputs[key], in.Vout)
+				}
+			}
+		}
+	}
+	for _, tx := range txs {
+	work1:
+		for index, out := range tx.Vouts {
+			if out.UnLockWithAddress(address) {
+				if len(spentTXOutputs) == 0 {
+					utxo = append(utxo, &UTXO{tx.TxHash, index, out})
+				} else {
+					for hash, indexArray := range spentTXOutputs {
+						if hash == hex.EncodeToString(tx.TxHash) {
+							var isUnSpentUTXO bool
+							for _, outIndex := range indexArray {
+								if outIndex == index {
+									isUnSpentUTXO = true
+									continue work1
+								}
+								if isUnSpentUTXO == false {
+									utxo = append(utxo, &UTXO{tx.TxHash, index, out})
+								}
+							}
+						} else {
+							utxo = append(utxo, &UTXO{tx.TxHash, index, out})
+						}
+					}
+				}
+			}
+		}
+	}
 	//最后一个区块hash
 	hash := blc.Tip
 	for hash != nil {
 		//根据哈希查找区块
 		block := blc.GetBlock(hash)
 		//遍历交易
-		for _, tx := range block.Txs {
+		for i := len(block.Txs) - 1; i >= 0; i-- {
+			tx := block.Txs[i]
 			//输入
 			if !tx.IsCoinbaseTransaction() {
 				for _, in := range tx.Vins {
@@ -127,9 +165,31 @@ func (blc *Blockchain) GetUtxo(address string) []*UTXO {
 	return utxo
 }
 
+// GetAbleUTXO 得到可用utxo
+func (blc *Blockchain) GetAbleUTXO(from string, amount int64, txs []*Transaction) (int64, map[string][]int) {
+	ableUTXO := make(map[string][]int)
+	//获取所有的UTXO
+	utxos := blc.GetUtxos(from, txs)
+	//遍历utxo
+	money := int64(0)
+	for _, utxo := range utxos {
+		hashString := hex.EncodeToString(utxo.TxHash)
+		ableUTXO[hashString] = append(ableUTXO[hashString], utxo.Index)
+		money += utxo.Output.Value
+		if money >= amount {
+			break
+		}
+	}
+	if money < amount {
+		fmt.Printf("%s账户余额不足!", from)
+		os.Exit(1)
+	}
+	return money, ableUTXO
+}
+
 // GetBalance 获取账户余额
 func (blc *Blockchain) GetBalance(address string) {
-	utxo := blc.GetUtxo(address)
+	utxo := blc.GetUtxos(address, []*Transaction{})
 	var amount int64
 	for _, output := range utxo {
 		amount += output.Output.Value
@@ -139,14 +199,13 @@ func (blc *Blockchain) GetBalance(address string) {
 
 // MineNewBlock 打包交易形成新区快
 func (blc *Blockchain) MineNewBlock(from []string, to []string, amount []string) {
-
-	//建立一笔交易
-	value, _ := strconv.Atoi(amount[0])
-	tx := NewTransaction(from[0], to[0], int64(value))
 	//1.构建交易数组
 	var txs []*Transaction
-	txs = append(txs, tx)
-
+	for index, _ := range from {
+		value, _ := strconv.Atoi(amount[index])
+		tx := NewTransaction(from[index], to[index], int64(value), blc, txs)
+		txs = append(txs, tx)
+	}
 	//2.创建新区快
 	block := NewBlock(txs, blc.GetHeight()+1, blc.Tip)
 	//3.将区块存储到数据库

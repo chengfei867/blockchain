@@ -1,0 +1,1 @@
+.\main.exe send -from '[\"asd\",\"dss\"]' -to '[\"wq\",\"as\"]' -amount '[\"4\",\"7\"]'
